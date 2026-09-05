@@ -1,3 +1,4 @@
+import { SpanStatusCode } from '@opentelemetry/api'
 import type { AttributeValue } from '@opentelemetry/api'
 import type { InvocationState, InvokableAgent } from '../types/agent.js'
 import type { MultiAgentContentInput, MultiAgentInput, MultiAgentInvokeOptions } from './multiagent.js'
@@ -443,6 +444,8 @@ export class Graph implements MultiAgent {
       this._tracer.endMultiAgentSpan(multiAgentSpan, {
         duration: Date.now() - state.startTime,
         ...(result && { usage: result.usage }),
+        ...(result?.status === Status.FAILED && { status: SpanStatusCode.ERROR }),
+        ...(result?.error && { error: result.error }),
         ...(caughtError && { error: caughtError }),
       })
 
@@ -555,7 +558,12 @@ export class Graph implements MultiAgent {
       }
 
       const result = next.value
-      this._tracer.endNodeSpan(nodeSpan, { status: result.status, duration: result.duration, usage: result.usage })
+      this._tracer.endNodeSpan(nodeSpan, {
+        status: result.status,
+        duration: result.duration,
+        usage: result.usage,
+        ...(result.error && { error: result.error }),
+      })
       queue.push({ type: 'result', node, result })
 
       await queue.send({

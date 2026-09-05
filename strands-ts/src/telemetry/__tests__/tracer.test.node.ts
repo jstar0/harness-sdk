@@ -313,6 +313,19 @@ describe('Tracer', () => {
     })
   })
 
+  describe('endMultiAgentSpan', () => {
+    it('sets an explicit status without recording an exception', () => {
+      const tracer = new Tracer()
+      const span = tracer.startMultiAgentSpan({ orchestratorId: 'graph-1', orchestratorType: 'graph' })
+
+      tracer.endMultiAgentSpan(span, { status: SpanStatusCode.ERROR })
+
+      expect(mockSpan.calls.setStatus).toContainEqual({ status: { code: SpanStatusCode.ERROR } })
+      expect(mockSpan.calls.recordException).toHaveLength(0)
+      expect(mockSpan.calls.end).toHaveLength(1)
+    })
+  })
+
   describe('startModelInvokeSpan', () => {
     it('creates span with chat operation name and model id', () => {
       const tracer = new Tracer()

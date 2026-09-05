@@ -1,5 +1,6 @@
 import { logger } from '../logging/logger.js'
 import { warnOnce } from '../logging/warn-once.js'
+import { SpanStatusCode } from '@opentelemetry/api'
 import type { AttributeValue, Span } from '@opentelemetry/api'
 import type { InvocationState, InvokableAgent } from '../types/agent.js'
 import type { MultiAgentInput, MultiAgentInvokeOptions } from './multiagent.js'
@@ -413,6 +414,8 @@ export class Swarm implements MultiAgent {
       this._tracer.endMultiAgentSpan(multiAgentSpan, {
         duration: Date.now() - state.startTime,
         ...(result && { usage: result.usage }),
+        ...(result?.status === Status.FAILED && { status: SpanStatusCode.ERROR }),
+        ...(result?.error && { error: result.error }),
         ...(caughtError && { error: caughtError }),
       })
 
@@ -508,7 +511,12 @@ export class Swarm implements MultiAgent {
       }
 
       const result = next.value
-      this._tracer.endNodeSpan(nodeSpan, { status: result.status, duration: result.duration, usage: result.usage })
+      this._tracer.endNodeSpan(nodeSpan, {
+        status: result.status,
+        duration: result.duration,
+        usage: result.usage,
+        ...(result.error && { error: result.error }),
+      })
       state.results.push(result)
 
       yield* this._emit(new AfterNodeCallEvent({ orchestrator: this, state, nodeId: node.id, invocationState }))

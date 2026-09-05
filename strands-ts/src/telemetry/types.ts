@@ -2,7 +2,7 @@
  * Type definitions for OpenTelemetry telemetry support.
  */
 
-import type { AttributeValue, SpanContext } from '@opentelemetry/api'
+import type { AttributeValue, SpanContext, SpanStatusCode } from '@opentelemetry/api'
 import type { Message, SystemPrompt, ToolResultBlock } from '../types/messages.js'
 import type { InvokeArgs } from '../types/agent.js'
 import type { ToolSpec, ToolUse } from '../tools/types.js'
@@ -132,6 +132,8 @@ export interface StartMultiAgentSpanOptions {
 export interface EndMultiAgentSpanOptions {
   /** Error that caused the orchestration to fail. */
   error?: Error | undefined
+  /** Final OpenTelemetry status for the orchestration. */
+  status?: SpanStatusCode | undefined
   /** Total duration of the orchestration in milliseconds. */
   duration?: number | undefined
   /** Aggregated token usage across all node executions. */

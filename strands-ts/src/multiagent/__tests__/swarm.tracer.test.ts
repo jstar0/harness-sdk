@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach, type MockInstance } from 'vitest'
+import { SpanStatusCode } from '@opentelemetry/api'
 import { Agent } from '../../agent/agent.js'
 import { MockMessageModel } from '../../__fixtures__/mock-message-model.js'
 import { TextBlock } from '../../types/messages.js'
@@ -149,6 +150,19 @@ describe('Swarm tracer integration', () => {
       })
       expect(endOpts.duration).toBeGreaterThanOrEqual(0)
     })
+
+    it('marks the multi-agent span ERROR when a node result fails', async () => {
+      const model = new MockMessageModel().addTurn(new Error('agent exploded'))
+      swarm = new Swarm({ nodes: [new Agent({ model, printer: false, id: 'a', description: 'Agent a' })] })
+      tracer = getSwarmTracer()
+
+      const result = await swarm.invoke('Hello')
+
+      expect(result.status).toBe(Status.FAILED)
+      const [, endOpts] = tracer.endMultiAgentSpan.mock.calls[0]!
+      expect(endOpts.status).toBe(SpanStatusCode.ERROR)
+      expect(endOpts.error).toBeUndefined()
+    })
   })
 
   describe('node span lifecycle', () => {
@@ -210,6 +224,7 @@ describe('Swarm tracer integration', () => {
       expect(endOpts).toEqual({
         status: Status.FAILED,
         duration: expect.any(Number),
+        error: expect.objectContaining({ message: 'agent exploded' }),
       })
       expect(endOpts.duration).toBeGreaterThanOrEqual(0)
     })
